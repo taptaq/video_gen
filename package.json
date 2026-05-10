@@ -5,6 +5,9 @@
   "repository": {},
   "license": "UNLICENSED",
   "private": true,
+  "engines": {
+    "node": ">=20"
+  },
   "dependencies": {
     "@remotion/cli": "4.0.459",
     "react": "19.2.3",
@@ -25,7 +28,10 @@
     "dev": "remotion studio",
     "build": "remotion bundle",
     "upgrade": "remotion upgrade",
-    "lint": "eslint src && tsc"
+    "lint": "eslint src && tsc",
+    "create:spec": "node scripts/create-spec.mjs",
+    "generate:spec:ai": "node scripts/generate-spec-with-ai.mjs",
+    "ai:ui": "node tools/spec-studio/server.mjs"
   },
   "sideEffects": [
     "*.css"

@@ -1,0 +1,131 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Spec Studio</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <aside class="hero-panel">
+        <div class="hero-badge">Spec Studio</div>
+        <h1>用几句话，把视频主题长成可执行 spec。</h1>
+        <p class="hero-copy">
+          适合还没完整想清结构的时候。你可以只输入一句自然语言，或者补几条要点，让模型先帮你长出创作 brief，再落到项目源码。
+        </p>
+        <div class="status-card">
+          <div class="status-title">当前状态</div>
+          <div id="env-status" class="status-line">正在检查本地配置...</div>
+          <div id="spec-count" class="status-subtle"></div>
+        </div>
+        <div class="tip-card">
+          <div class="tip-title">推荐输入方式</div>
+          <ul class="tip-list">
+            <li>只说一句：适合没有完整思路时快速起稿。</li>
+            <li>补 audience / tone：适合你有一点方向，但不想手写 JSON。</li>
+            <li>补 must include：适合你有必须讲到的事实点。</li>
+          </ul>
+        </div>
+      </aside>
+
+      <main class="workspace">
+        <section class="input-panel">
+          <div class="section-kicker">输入</div>
+          <h2>自然语言需求</h2>
+          <textarea
+            id="prompt"
+            class="prompt-box"
+            placeholder="例如：想做一个关于久坐危害的短视频，别太吓人，要实用一点，适合抖音。"
+          ></textarea>
+
+          <div class="field-grid">
+            <label class="field">
+              <span>主题</span>
+              <input id="topic" placeholder="比如：鱼油误区" />
+            </label>
+            <label class="field">
+              <span>受众</span>
+              <input id="audience" placeholder="比如：第一次接触保健品的人" />
+            </label>
+            <label class="field">
+              <span>平台</span>
+              <input id="platform" placeholder="比如：抖音 / 小红书" />
+            </label>
+            <label class="field">
+              <span>语气</span>
+              <input id="tone" placeholder="比如：专业、可信、别太板" />
+            </label>
+          </div>
+
+          <div class="field-grid single-row">
+            <label class="field wide">
+              <span>目标</span>
+              <input id="goal" placeholder="比如：让新手快速理解选购逻辑" />
+            </label>
+          </div>
+
+          <div class="field-grid stack-grid">
+            <label class="field wide">
+              <span>必须包含</span>
+              <textarea
+                id="must-include"
+                class="mini-box"
+                placeholder="每行一条，比如：&#10;保健品不是药&#10;EPA/DHA 不是越高越好"
+              ></textarea>
+            </label>
+            <label class="field wide">
+              <span>避免表达</span>
+              <textarea
+                id="avoid"
+                class="mini-box"
+                placeholder="每行一条，比如：&#10;夸张疗效&#10;绝对化表述"
+              ></textarea>
+            </label>
+          </div>
+
+          <div class="action-row">
+            <button id="ideate-btn" class="ghost-btn">先出 3 个方向</button>
+            <button id="generate-btn" class="primary-btn">直接生成预览</button>
+            <button id="save-btn" class="secondary-btn" disabled>保存到项目</button>
+            <div id="action-status" class="action-status"></div>
+          </div>
+        </section>
+
+        <section class="output-grid">
+          <article class="output-card output-card-wide">
+            <div class="section-kicker">Directions</div>
+            <h3>先选一个方向，再往下生成</h3>
+            <div id="directions-view" class="directions-view empty-state">还没有方向提案。</div>
+          </article>
+
+          <article class="output-card output-card-wide">
+            <div class="section-kicker">Library</div>
+            <h3>已注册视频库</h3>
+            <div id="composition-library" class="composition-library empty-state">正在加载 compositions...</div>
+          </article>
+
+          <article class="output-card">
+            <div class="section-kicker">Brief</div>
+            <h3>模型补全后的创作方向</h3>
+            <div id="brief-view" class="brief-view empty-state">还没有生成内容。</div>
+          </article>
+
+          <article class="output-card">
+            <div class="section-kicker">Assumptions</div>
+            <h3>模型自动补的前提</h3>
+            <div id="assumptions-view" class="assumptions-view empty-state">生成后会在这里显示。</div>
+          </article>
+
+          <article class="output-card output-card-wide">
+            <div class="section-kicker">Spec JSON</div>
+            <h3>项目可执行结构</h3>
+            <pre id="spec-json" class="json-view empty-state">还没有生成 JSON。</pre>
+          </article>
+        </section>
+      </main>
+    </div>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+  </html>
