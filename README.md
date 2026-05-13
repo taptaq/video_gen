@@ -19,10 +19,18 @@ Welcome to your Remotion project!
 npm i
 ```
 
-**Start Preview**
+**Start Unified App**
 
 ```console
 npm run dev
+```
+
+This now starts the AI spec UI and mounts Remotion Studio under the same local origin.
+
+**Start Only Remotion Studio**
+
+```console
+npm run studio
 ```
 
 **Render video**

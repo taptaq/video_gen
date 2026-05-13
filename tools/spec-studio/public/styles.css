@@ -56,6 +56,29 @@ body {
   gap: 18px;
 }
 
+.app-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.app-nav-link {
+  border-radius: 999px;
+  padding: 10px 16px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(255, 255, 255, 0.82);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.app-nav-link.is-active {
+  border-color: rgba(105, 239, 244, 0.55);
+  background: rgba(105, 239, 244, 0.12);
+  color: #d9fdff;
+}
+
 .hero-badge,
 .section-kicker {
   display: inline-flex;
@@ -87,7 +110,8 @@ body {
 }
 
 .status-card,
-.tip-card {
+.tip-card,
+.shortcut-card {
   border-radius: 24px;
   padding: 18px 20px;
   background: var(--panel-strong);
@@ -121,9 +145,25 @@ body {
   line-height: 1.7;
 }
 
+.shortcut-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
 .workspace {
   display: grid;
   gap: 24px;
+  align-content: start;
+}
+
+.route-panel {
+  display: grid;
+  gap: 24px;
+}
+
+.route-panel[hidden] {
+  display: none;
 }
 
 .input-panel {
@@ -267,6 +307,41 @@ button:disabled {
 .output-card {
   border-radius: 28px;
   padding: 24px;
+}
+
+.studio-route-card {
+  min-height: calc(100vh - 48px);
+  display: grid;
+  gap: 18px;
+}
+
+.studio-route-header {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+
+.studio-route-status {
+  margin: 12px 0 0;
+  color: var(--muted);
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.studio-route-actions {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.studio-frame {
+  width: 100%;
+  min-height: calc(100vh - 220px);
+  border: 1px solid var(--line);
+  border-radius: 22px;
+  background: rgba(3, 8, 14, 0.82);
 }
 
 .output-card-wide {
@@ -444,5 +519,9 @@ button:disabled {
   .directions-grid,
   .library-grid {
     grid-template-columns: 1fr;
+  }
+
+  .studio-frame {
+    min-height: 68vh;
   }
 }

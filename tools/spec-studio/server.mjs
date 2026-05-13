@@ -3,7 +3,15 @@
 import fs from "node:fs";
 import http from "node:http";
 import path from "node:path";
+import { spawn } from "node:child_process";
 import { URL } from "node:url";
+import { createRemotionStudioProxy } from "./remotion-studio-proxy.mjs";
+import {
+	STUDIO_PROXY_PATH,
+	STUDIO_SHELL_PATH,
+	buildStudioShellUrl,
+	isAppShellRoute,
+} from "./public/app-routes.mjs";
 import {
 	generateAiPackage,
 	hasUsableInput,
@@ -15,25 +23,45 @@ import {
 import { getProjectRoot } from "../../scripts/spec-utils.mjs";
 
 const projectRoot = getProjectRoot();
+loadProjectEnv(projectRoot);
+
 const publicDir = path.join(projectRoot, "tools", "spec-studio", "public");
 const port = Number(process.env.SPEC_STUDIO_PORT ?? 3210);
 const host = process.env.SPEC_STUDIO_HOST ?? "127.0.0.1";
-const studioBaseUrl = process.env.REMOTION_STUDIO_URL ?? "http://127.0.0.1:3000";
+const managedStudioBaseUrl = process.env.REMOTION_STUDIO_URL ?? "http://127.0.0.1:3000";
+const publicStudioBaseUrl = `http://${host}:${port}${STUDIO_SHELL_PATH}`;
+const shouldManageStudioProcess = !process.env.REMOTION_STUDIO_URL;
 
-loadProjectEnv(projectRoot);
+const studioProxy = createRemotionStudioProxy({
+	upstreamBaseUrl: managedStudioBaseUrl,
+	mountPath: STUDIO_PROXY_PATH,
+});
+
+let studioProcess = null;
+let isShuttingDown = false;
 
 const server = http.createServer(async (req, res) => {
 	try {
 		const method = req.method ?? "GET";
 		const url = new URL(req.url ?? "/", `http://${host}:${port}`);
 
+		if (studioProxy.isStudioRequest(url.pathname)) {
+			await studioProxy.proxyHttpRequest(req, res);
+			return;
+		}
+
 		if (method === "GET" && url.pathname === "/api/status") {
+			if (shouldManageStudioProcess) {
+				await ensureManagedStudioProcess();
+			}
+
 			const compositions = getRegisteredCompositions();
 			return sendJson(res, 200, {
 				keyConfigured: Boolean(process.env.DEEPSEEK_API_KEY),
 				model: process.env.DEEPSEEK_MODEL ?? "deepseek-v4-flash",
 				specCount: compositions.length,
-				studioBaseUrl,
+				studioBaseUrl: publicStudioBaseUrl,
+				studioProxyBaseUrl: `http://${host}:${port}${STUDIO_PROXY_PATH}`,
 				studioAvailable: await isStudioAvailable(),
 				compositions,
 			});
@@ -111,6 +139,10 @@ const server = http.createServer(async (req, res) => {
 		}
 
 		if (method === "GET") {
+			if (isAppShellRoute(url.pathname)) {
+				return serveAppShell(res);
+			}
+
 			return serveStaticFile(url.pathname, res);
 		}
 
@@ -122,9 +154,24 @@ const server = http.createServer(async (req, res) => {
 	}
 });
 
-server.listen(port, host, () => {
-	console.log(`Spec Studio running at http://${host}:${port}`);
+server.on("upgrade", (req, socket, head) => {
+	if (studioProxy.handleUpgrade(req, socket, head)) {
+		return;
+	}
+
+	socket.destroy();
 });
+
+if (shouldManageStudioProcess) {
+	void ensureManagedStudioProcess();
+}
+
+server.listen(port, host, () => {
+	console.log(`Unified app running at http://${host}:${port}`);
+	console.log(`App shell: http://${host}:${port}/`);
+});
+
+registerShutdownHandlers();
 
 function getRegisteredCompositions() {
 	const specsDir = path.join(projectRoot, "src", "specs");
@@ -151,7 +198,7 @@ function getRegisteredCompositions() {
 				topic,
 				hookTitle,
 				summary,
-				studioUrl: compositionId ? `${studioBaseUrl}/${encodeURIComponent(compositionId)}` : null,
+				studioUrl: `http://${host}:${port}${buildStudioShellUrl(compositionId)}`,
 			};
 		});
 }
@@ -170,6 +217,12 @@ async function readJsonBody(req) {
 	return raw ? JSON.parse(raw) : {};
 }
 
+function serveAppShell(res) {
+	const filePath = path.join(publicDir, "index.html");
+	res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
+	res.end(fs.readFileSync(filePath));
+}
+
 function serveStaticFile(requestPath, res) {
 	const normalizedPath = requestPath === "/" ? "/index.html" : requestPath;
 	const filePath = path.join(publicDir, normalizedPath);
@@ -179,10 +232,10 @@ function serveStaticFile(requestPath, res) {
 	}
 
 	const ext = path.extname(filePath);
-	const contentType =
+		const contentType =
 		ext === ".html"
 			? "text/html; charset=utf-8"
-			: ext === ".js"
+			: ext === ".js" || ext === ".mjs"
 				? "application/javascript; charset=utf-8"
 				: ext === ".css"
 					? "text/css; charset=utf-8"
@@ -203,7 +256,7 @@ async function isStudioAvailable() {
 	try {
 		const controller = new AbortController();
 		const timeout = setTimeout(() => controller.abort(), 1200);
-		const response = await fetch(studioBaseUrl, {
+		const response = await fetch(managedStudioBaseUrl, {
 			method: "GET",
 			signal: controller.signal,
 		});
@@ -212,4 +265,135 @@ async function isStudioAvailable() {
 	} catch {
 		return false;
 	}
+}
+
+async function ensureManagedStudioProcess() {
+	if (studioProcess) {
+		return;
+	}
+
+	if (await isStudioAvailable()) {
+		console.log(`Reusing existing Remotion Studio at ${managedStudioBaseUrl}`);
+		return;
+	}
+
+	const remotionCliPath = path.join(
+		projectRoot,
+		"node_modules",
+		"@remotion",
+		"cli",
+		"remotion-cli.js",
+	);
+	const studioPort = getManagedStudioPort();
+
+	console.log("Starting embedded Remotion runtime...");
+
+	studioProcess = spawn(
+		process.execPath,
+		[remotionCliPath, "studio", "src/index.ts", "--port", studioPort, "--no-open"],
+		{
+			cwd: projectRoot,
+			env: {
+				...process.env,
+			},
+			stdio: ["ignore", "pipe", "pipe"],
+		},
+	);
+
+	pipeStudioLogs(studioProcess.stdout, "log");
+	pipeStudioLogs(studioProcess.stderr, "warn");
+
+	studioProcess.on("error", (error) => {
+		console.error(
+			`Failed to launch Remotion Studio: ${
+				error instanceof Error ? error.message : "Unknown error"
+			}`,
+		);
+		studioProcess = null;
+	});
+
+	studioProcess.on("exit", (code, signal) => {
+		if (!isShuttingDown) {
+			console.warn(
+				`Remotion Studio process stopped (${signal ?? code ?? "unknown"}). /studio will be unavailable until it is restarted.`,
+			);
+		}
+
+		studioProcess = null;
+	});
+}
+
+function getManagedStudioPort() {
+	const studioUrl = new URL(managedStudioBaseUrl);
+	if (studioUrl.port) {
+		return studioUrl.port;
+	}
+
+	return studioUrl.protocol === "https:" ? "443" : "80";
+}
+
+function registerShutdownHandlers() {
+	for (const signal of ["SIGINT", "SIGTERM"]) {
+		process.on(signal, () => {
+			void shutdown();
+		});
+	}
+}
+
+async function shutdown() {
+	if (isShuttingDown) {
+		return;
+	}
+
+	isShuttingDown = true;
+
+	await new Promise((resolve) => {
+		server.close(() => resolve());
+	});
+
+	if (studioProcess) {
+		studioProcess.kill("SIGTERM");
+	}
+
+	process.exit(0);
+}
+
+function pipeStudioLogs(stream, level) {
+	if (!stream) {
+		return;
+	}
+
+	let buffer = "";
+
+	stream.setEncoding("utf8");
+	stream.on("data", (chunk) => {
+		buffer += chunk;
+		const lines = buffer.split(/\r?\n/);
+		buffer = lines.pop() ?? "";
+
+		for (const line of lines) {
+			const message = line.trim();
+			if (!message) {
+				continue;
+			}
+
+			if (message.startsWith("Server ready - Local:")) {
+				console.log("Embedded Remotion runtime ready.");
+				continue;
+			}
+
+			if (message.startsWith("Building...")) {
+				console.log("Embedded Remotion runtime building...");
+				continue;
+			}
+
+			if (message.startsWith("Built in ")) {
+				console.log(message);
+				continue;
+			}
+
+			const logger = level === "warn" ? console.warn : console.log;
+			logger(`[remotion] ${message}`);
+		}
+	});
 }
