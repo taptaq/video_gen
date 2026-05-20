@@ -3,6 +3,7 @@ import {
 	buildStudioShellUrl,
 	parseAppRoute,
 } from "./app-routes.mjs";
+import { buildGeneratePayload as buildGenerateRequestPayload, buildIdeatePayload } from "./request-builder.mjs";
 
 const specRoute = document.getElementById("spec-route");
 const studioRoute = document.getElementById("studio-route");
@@ -16,6 +17,8 @@ const actionStatus = document.getElementById("action-status");
 const ideateBtn = document.getElementById("ideate-btn");
 const generateBtn = document.getElementById("generate-btn");
 const saveBtn = document.getElementById("save-btn");
+const modeToggle = document.getElementById("mode-toggle");
+const modeCopy = document.getElementById("mode-copy");
 const directionsView = document.getElementById("directions-view");
 const compositionLibrary = document.getElementById("composition-library");
 const briefView = document.getElementById("brief-view");
@@ -32,6 +35,7 @@ bindEvents();
 boot();
 
 function bindEvents() {
+	modeToggle.addEventListener("click", handleModeChange);
 	ideateBtn.addEventListener("click", handleIdeate);
 	generateBtn.addEventListener("click", handleGenerate);
 	saveBtn.addEventListener("click", handleSave);
@@ -62,6 +66,7 @@ function bindEvents() {
 }
 
 async function boot() {
+	setSelectedMode("long-copy");
 	renderRoute();
 	await loadStatus();
 	renderRoute();
@@ -79,7 +84,7 @@ async function handleIdeate() {
 			headers: {
 				"Content-Type": "application/json",
 			},
-			body: JSON.stringify(readForm()),
+			body: JSON.stringify(buildIdeatePayload(readForm(), getSelectedMode())),
 		});
 
 		const payload = await response.json();
@@ -111,7 +116,7 @@ async function handleGenerate() {
 			headers: {
 				"Content-Type": "application/json",
 			},
-			body: JSON.stringify(buildGeneratePayload()),
+			body: JSON.stringify(buildGenerateRequestPayload(readForm(), selectedDirection, getSelectedMode())),
 		});
 
 		const payload = await response.json();
@@ -278,26 +283,6 @@ function readForm() {
 	};
 }
 
-function buildGeneratePayload() {
-	const form = readForm();
-
-	if (!selectedDirection) {
-		return form;
-	}
-
-	return {
-		...form,
-		prompt: [form.prompt, selectedDirection.seedPrompt].filter(Boolean).join("\n\n"),
-		topic: selectedDirection.topic || form.topic,
-		audience: selectedDirection.audience || form.audience,
-		platform: selectedDirection.platform || form.platform,
-		tone: selectedDirection.tone || form.tone,
-		goal: selectedDirection.goal || form.goal,
-		mustInclude: selectedDirection.mustInclude?.length ? selectedDirection.mustInclude : form.mustInclude,
-		avoid: selectedDirection.avoid?.length ? selectedDirection.avoid : form.avoid,
-	};
-}
-
 function splitLines(value) {
 	return value
 		.split(/\r?\n/)
@@ -437,6 +422,33 @@ function fillFormFromDirection(direction) {
 	document.getElementById("goal").value = direction.goal || "";
 	document.getElementById("must-include").value = (direction.mustInclude || []).join("\n");
 	document.getElementById("avoid").value = (direction.avoid || []).join("\n");
+}
+
+function handleModeChange(event) {
+	const button = event.target.closest("[data-mode]");
+	if (!button) {
+		return;
+	}
+
+	setSelectedMode(button.getAttribute("data-mode"));
+}
+
+function getSelectedMode() {
+	return modeToggle.querySelector(".is-active")?.getAttribute("data-mode") || "long-copy";
+}
+
+function setSelectedMode(mode) {
+	for (const button of modeToggle.querySelectorAll("[data-mode]")) {
+		button.classList.toggle("is-active", button.getAttribute("data-mode") === mode);
+		button.setAttribute("aria-selected", button.getAttribute("data-mode") === mode ? "true" : "false");
+	}
+
+	const isStructured = mode === "structured";
+	modeToggle.dataset.mode = mode;
+	modeCopy.textContent = isStructured
+		? "structured 模式会把主题、受众、平台、语气和目标当作主输入，prompt 只作为补充背景。"
+		: "long-copy 模式会把 prompt 当作主输入，结构化字段作为辅助补充。";
+	document.querySelector(".input-panel")?.classList.toggle("structured-mode", isStructured);
 }
 
 function renderPackage(payload) {

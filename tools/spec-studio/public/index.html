@@ -43,14 +43,23 @@
         <section id="spec-route" class="route-panel">
           <section class="input-panel">
             <div class="section-kicker">输入</div>
-            <h2>自然语言需求</h2>
+            <div class="input-header">
+              <div>
+                <h2>自然语言需求</h2>
+                <p id="mode-copy" class="mode-copy">long-copy 模式会把 prompt 当作主输入，结构化字段作为辅助补充。</p>
+              </div>
+              <div id="mode-toggle" class="mode-toggle" role="tablist" aria-label="请求模式">
+                <button type="button" class="mode-chip is-active" data-mode="long-copy" role="tab" aria-selected="true">long-copy</button>
+                <button type="button" class="mode-chip" data-mode="structured" role="tab" aria-selected="false">structured</button>
+              </div>
+            </div>
             <textarea
               id="prompt"
               class="prompt-box"
               placeholder="例如：想做一个关于久坐危害的短视频，别太吓人，要实用一点，适合抖音。"
             ></textarea>
 
-            <div class="field-grid">
+            <div class="field-grid structured-primary">
               <label class="field">
                 <span>主题</span>
                 <input id="topic" placeholder="比如：鱼油误区" />
@@ -78,7 +87,7 @@
 
             <div class="field-grid stack-grid">
               <label class="field wide">
-                <span>必须包含</span>
+                <span>必须包含 <em>辅助输入</em></span>
                 <textarea
                   id="must-include"
                   class="mini-box"
@@ -86,7 +95,7 @@
                 ></textarea>
               </label>
               <label class="field wide">
-                <span>避免表达</span>
+                <span>避免表达 <em>辅助输入</em></span>
                 <textarea
                   id="avoid"
                   class="mini-box"

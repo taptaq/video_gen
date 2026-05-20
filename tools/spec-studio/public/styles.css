@@ -178,6 +178,73 @@ body {
   letter-spacing: -0.04em;
 }
 
+.input-header {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.mode-copy {
+  margin: 8px 0 0;
+  color: var(--muted);
+  line-height: 1.55;
+  max-width: 56ch;
+}
+
+.mode-toggle {
+  display: inline-flex;
+  gap: 8px;
+  padding: 6px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.04);
+  align-self: flex-start;
+}
+
+.mode-chip {
+  appearance: none;
+  border: 0;
+  border-radius: 999px;
+  padding: 11px 16px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.72);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: lowercase;
+  cursor: pointer;
+}
+
+.mode-chip.is-active {
+  background: linear-gradient(135deg, rgba(105, 239, 244, 0.24), rgba(255, 211, 110, 0.18));
+  color: #f7fdff;
+  box-shadow: inset 0 0 0 1px rgba(105, 239, 244, 0.3);
+}
+
+.input-panel.structured-mode .prompt-box {
+  border-color: rgba(255, 211, 110, 0.28);
+  background: rgba(255, 211, 110, 0.05);
+}
+
+.input-panel.structured-mode .structured-primary {
+  border-radius: 24px;
+  padding: 18px;
+  margin-top: 18px;
+  border: 1px solid rgba(105, 239, 244, 0.22);
+  background: rgba(105, 239, 244, 0.04);
+}
+
+.field span em {
+  margin-left: 6px;
+  font-style: normal;
+  font-size: 12px;
+  color: rgba(255, 211, 110, 0.88);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
 .prompt-box,
 .field input,
 .mini-box {
