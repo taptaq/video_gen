@@ -14,7 +14,8 @@ const usage = `
 Usage:
   npm run generate:spec:ai -- "<topic or requirements>"
   npm run generate:spec:ai -- --input prompt.txt
-  npm run generate:spec:ai -- --topic "鱼油误区" --audience "新手" --tone "专业但不板" --must-include "保健品不是药"
+  npm run generate:spec:ai -- --mode long-copy "<topic or requirements>"
+  npm run generate:spec:ai -- --mode structured --topic "鱼油误区" --audience "新手" --tone "专业但不板" --must-include "保健品不是药"
 
 Environment:
   AI_PROVIDER=deepseek
@@ -28,7 +29,15 @@ const projectRoot = getProjectRoot();
 
 try {
 	const parsed = parseCliArgs(cliArgs);
+	if (parsed.help) {
+		console.log(usage.trim());
+		process.exit(0);
+	}
+
 	const parsedInput = parseGeneratorInput(parsed);
+	if (parsed.mode) {
+		parsedInput.mode = parsed.mode;
+	}
 
 	if (!hasUsableInput(parsedInput)) {
 		console.error(usage.trim());
@@ -66,6 +75,7 @@ function parseCliArgs(args) {
 		freeTextParts: [],
 		mustInclude: [],
 		avoid: [],
+		mode: "long-copy",
 	};
 
 	for (let index = 0; index < args.length; index += 1) {
@@ -86,8 +96,15 @@ function parseCliArgs(args) {
 		};
 
 		switch (arg) {
+			case "--help":
+			case "-h":
+				parsedArgs.help = true;
+				break;
 			case "--input":
 				parsedArgs.promptFromFile = takeNextValue();
+				break;
+			case "--mode":
+				parsedArgs.mode = normalizeMode(takeNextValue());
 				break;
 			case "--topic":
 				parsedArgs.topic = takeNextValue();
@@ -131,4 +148,12 @@ function parseCliArgs(args) {
 	}
 
 	return parsedArgs;
+}
+
+function normalizeMode(value) {
+	if (value === "long-copy" || value === "structured") {
+		return value;
+	}
+
+	throw new Error(`Invalid value for --mode: ${value}. Expected long-copy or structured.`);
 }
