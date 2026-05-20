@@ -36,6 +36,8 @@ export function loadProjectEnv(projectRoot = getProjectRoot()) {
 }
 
 export function parseGeneratorInput(input) {
+	const mode = normalizeMode(input.mode);
+
 	return {
 		prompt: typeof input.prompt === "string" ? input.prompt.trim() : "",
 		topic: normalizeOptionalString(input.topic),
@@ -47,6 +49,7 @@ export function parseGeneratorInput(input) {
 		avoid: normalizeStringArray(input.avoid),
 		provider: normalizeOptionalString(input.provider),
 		model: normalizeOptionalString(input.model),
+		mode,
 	};
 }
 
@@ -72,6 +75,7 @@ export function buildRequestContext(parsedInput) {
 
 	return {
 		rawPrompt: promptText,
+		mode: parsedInput.mode ?? "long-copy",
 		topic: parsedInput.topic,
 		audience: parsedInput.audience,
 		platform: parsedInput.platform,
@@ -107,8 +111,8 @@ export async function ideateAiDirections({
 		apiKey,
 		baseUrl,
 		model,
-		systemPrompt: buildIdeationSystemPrompt(),
-		userPrompt: buildIdeationUserPrompt(requestContext),
+		systemPrompt: buildIdeationSystemPrompt(requestContext.mode),
+		userPrompt: buildIdeationUserPrompt(requestContext, requestContext.mode),
 	});
 
 	const payload = extractJsonObject(responseText);
@@ -147,8 +151,8 @@ export async function generateAiPackage({
 		apiKey,
 		baseUrl,
 		model,
-		systemPrompt: buildSpecSystemPrompt(),
-		userPrompt: buildSpecUserPrompt(requestContext),
+		systemPrompt: buildSpecSystemPrompt(requestContext.mode),
+		userPrompt: buildSpecUserPrompt(requestContext, requestContext.mode),
 	});
 
 	const payload = extractJsonObject(responseText);
@@ -309,12 +313,28 @@ async function callDeepSeek({
 	return content;
 }
 
-function buildSpecSystemPrompt() {
+function buildSpecSystemPrompt(mode = "long-copy") {
+	const instructions =
+		mode === "structured"
+			? [
+					"You are generating both a creative brief and structured JSON for a Remotion knowledge-video template.",
+					"Treat the structured fields as the primary contract.",
+					"When the structured fields and raw prompt differ, follow the structured fields first and use the raw prompt only to fill gaps.",
+					"Return valid JSON only.",
+					"Do not wrap the JSON in markdown fences.",
+					"Generate concise, platform-ready Chinese copy for a 9:16 short-form educational video.",
+			  ]
+			: [
+					"You are generating both a creative brief and structured JSON for a Remotion knowledge-video template.",
+					"Start by extracting the structure hidden in the raw prompt, then reconcile any structured hints against it.",
+					"Treat the raw prompt as the main source of intent when it is present.",
+					"Return valid JSON only.",
+					"Do not wrap the JSON in markdown fences.",
+					"Generate concise, platform-ready Chinese copy for a 9:16 short-form educational video.",
+			  ];
+
 	return [
-		"You are generating both a creative brief and structured JSON for a Remotion knowledge-video template.",
-		"Return valid JSON only.",
-		"Do not wrap the JSON in markdown fences.",
-		"Generate concise, platform-ready Chinese copy for a 9:16 short-form educational video.",
+		...instructions,
 		"Follow this exact top-level shape:",
 		"{",
 		'  "brief": {',
@@ -354,7 +374,7 @@ function buildSpecSystemPrompt() {
 	].join("\n");
 }
 
-function buildSpecUserPrompt(requestContext) {
+function buildSpecUserPrompt(requestContext, mode = "long-copy") {
 	const extraLines = [
 		requestContext.topic ? `- topic: ${requestContext.topic}` : null,
 		requestContext.audience ? `- audience: ${requestContext.audience}` : null,
@@ -370,8 +390,12 @@ function buildSpecUserPrompt(requestContext) {
 		.join("\n");
 
 	return [
-		"Generate one complete JSON object for the following video request.",
-		"If the request is sparse, infer a strong educational structure and clearly surface your assumptions.",
+		mode === "structured"
+			? "Generate one complete JSON object for the following video request."
+			: "Generate one complete JSON object by first extracting the structure hidden in the raw prompt and then folding in the hints.",
+		mode === "structured"
+			? "Structured fields are the primary contract; use them first and treat the raw prompt as secondary support."
+			: "If the request is sparse, infer a strong educational structure from the raw prompt and clearly surface your assumptions.",
 		extraLines ? "\nStructured hints:\n" + extraLines : "",
 		"",
 		"Natural-language request:",
@@ -379,11 +403,26 @@ function buildSpecUserPrompt(requestContext) {
 	].join("\n");
 }
 
-function buildIdeationSystemPrompt() {
+function buildIdeationSystemPrompt(mode = "long-copy") {
+	const instructions =
+		mode === "structured"
+			? [
+					"You are helping ideate short-form knowledge video directions before final script generation.",
+					"Treat the structured fields as the primary contract.",
+					"Use the raw prompt only to resolve gaps or ambiguous details.",
+					"Return valid JSON only.",
+					"Do not wrap the JSON in markdown fences.",
+			  ]
+			: [
+					"You are helping ideate short-form knowledge video directions before final script generation.",
+					"Start by extracting structure from the raw prompt before you interpret any hints.",
+					"Use the structured fields as supporting context, not the starting point.",
+					"Return valid JSON only.",
+					"Do not wrap the JSON in markdown fences.",
+			  ];
+
 	return [
-		"You are helping ideate short-form knowledge video directions before final script generation.",
-		"Return valid JSON only.",
-		"Do not wrap the JSON in markdown fences.",
+		...instructions,
 		"Output shape:",
 		"{",
 		'  "directions": [',
@@ -413,7 +452,7 @@ function buildIdeationSystemPrompt() {
 	].join("\n");
 }
 
-function buildIdeationUserPrompt(requestContext) {
+function buildIdeationUserPrompt(requestContext, mode = "long-copy") {
 	const extraLines = [
 		requestContext.topic ? `- topic: ${requestContext.topic}` : null,
 		requestContext.audience ? `- audience: ${requestContext.audience}` : null,
@@ -429,8 +468,12 @@ function buildIdeationUserPrompt(requestContext) {
 		.join("\n");
 
 	return [
-		"Please propose 3 distinct video directions for this request.",
-		"Each direction should be usable as the basis for a full knowledge-video spec.",
+		mode === "structured"
+			? "Please propose 3 distinct video directions for this request."
+			: "Please propose 3 distinct video directions by extracting the raw prompt structure first and then refining it with the hints.",
+		mode === "structured"
+			? "Each direction should treat the structured fields as the main contract."
+			: "Each direction should preserve the raw prompt's intent before interpreting the hints.",
 		extraLines ? "\nStructured hints:\n" + extraLines : "",
 		"",
 		"Natural-language request:",
@@ -467,6 +510,10 @@ function createFallbackBrief(requestContext, specObject) {
 
 function normalizeOptionalString(value) {
 	return typeof value === "string" && value.trim().length > 0 ? value.trim() : undefined;
+}
+
+function normalizeMode(value) {
+	return value === "structured" ? "structured" : "long-copy";
 }
 
 function normalizeStringArray(value) {
