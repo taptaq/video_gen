@@ -3,7 +3,17 @@ import {
 	buildStudioShellUrl,
 	parseAppRoute,
 } from "./app-routes.mjs";
+import { connectDevReload } from "./live-reload.mjs";
 import { buildGeneratePayload as buildGenerateRequestPayload, buildIdeatePayload } from "./request-builder.mjs";
+import {
+	getCompositionLibraryEmptyText,
+	getCompositionLibraryStatusText,
+	getDirectionSelectionStatus,
+	getDocumentTitle,
+	getModeCopyText,
+	getStudioRouteStatusText,
+	getStudioRouteTitleText,
+} from "./ui-copy.mjs";
 
 const specRoute = document.getElementById("spec-route");
 const studioRoute = document.getElementById("studio-route");
@@ -30,6 +40,7 @@ let latestDirections = [];
 let selectedDirection = null;
 let latestStatus = null;
 let studioAvailabilityPoll = null;
+let stopDevReload = null;
 
 bindEvents();
 boot();
@@ -67,6 +78,9 @@ function bindEvents() {
 
 async function boot() {
 	setSelectedMode("long-copy");
+	stopDevReload = connectDevReload(() => {
+		window.location.reload();
+	});
 	renderRoute();
 	await loadStatus();
 	renderRoute();
@@ -95,7 +109,7 @@ async function handleIdeate() {
 		latestDirections = payload.directions || [];
 		selectedDirection = null;
 		renderDirections(latestDirections);
-		setStatus("已经生成 3 个方向。你可以先选一个，再继续生成 spec。");
+		setStatus("已经生成 3 个方向。你可以先选一个，再继续生成规格。");
 	} catch (error) {
 		setStatus(error.message || "方向生成失败", true);
 	} finally {
@@ -127,7 +141,7 @@ async function handleGenerate() {
 		latestPackage = payload;
 		renderPackage(payload);
 		saveBtn.disabled = false;
-		setStatus("预览已生成，可以先看 brief，再决定是否保存。");
+		setStatus("预览已生成，可以先看概要，再决定是否保存。");
 	} catch (error) {
 		setStatus(error.message || "生成失败", true);
 	} finally {
@@ -158,7 +172,7 @@ async function handleSave() {
 			throw new Error(payload.error || "保存失败");
 		}
 
-		setStatus(`已保存：${payload.paths.specFile}，并更新了 specs 注册表。`);
+		setStatus(`已保存：${payload.paths.specFile}，并更新了规格注册表。`);
 		await loadStatus();
 	} catch (error) {
 		setStatus(error.message || "保存失败", true);
@@ -173,8 +187,8 @@ async function loadStatus() {
 	latestStatus = payload;
 	envStatus.textContent = payload.keyConfigured
 		? `DeepSeek 已配置，本地模型入口可用。默认模型：${payload.model}`
-		: "DeepSeek key 未配置，当前只能看界面，无法真正生成。";
-	specCount.textContent = `当前已注册 ${payload.specCount} 个 composition`;
+		: "DeepSeek 密钥未配置，当前只能看界面，无法真正生成。";
+	specCount.textContent = `当前已注册 ${payload.specCount} 个规格条目`;
 	renderCompositionLibrary(payload.compositions || [], payload.studioAvailable, payload.studioBaseUrl);
 	renderRoute();
 }
@@ -190,7 +204,7 @@ function renderRoute() {
 		link.classList.toggle("is-active", link.dataset.navLink === route.view);
 	}
 
-	document.title = isStudio ? "Spec Studio / Remotion Preview" : "Spec Studio";
+	document.title = getDocumentTitle(isStudio);
 
 	if (isStudio) {
 		renderStudioRoute(route.compositionId);
@@ -205,11 +219,10 @@ function renderStudioRoute(compositionId) {
 	const selectedComposition = compositions.find((item) => item.compositionId === compositionId) ?? null;
 	const studioReady = latestStatus?.studioAvailable ?? false;
 
-	studioRouteTitle.textContent = selectedComposition
-		? `${selectedComposition.topic} / Remotion 预览`
-		: compositionId
-			? `${compositionId} / Remotion 预览`
-			: "Remotion 预览";
+	studioRouteTitle.textContent = getStudioRouteTitleText({
+		compositionId,
+		topic: selectedComposition?.topic || null,
+	});
 
 	if (!latestStatus) {
 		studioRouteStatus.textContent = "正在读取本地状态...";
@@ -218,7 +231,11 @@ function renderStudioRoute(compositionId) {
 	}
 
 	if (!studioReady) {
-		studioRouteStatus.textContent = "正在唤起内嵌的 Remotion Studio，通常只需要几秒。";
+		studioRouteStatus.textContent = getStudioRouteStatusText({
+			compositionId,
+			selectedTopic: selectedComposition?.topic || null,
+			studioReady: false,
+		});
 		studioFrame.removeAttribute("src");
 		scheduleStudioPoll();
 		return;
@@ -226,9 +243,11 @@ function renderStudioRoute(compositionId) {
 
 	clearStudioPoll();
 
-	studioRouteStatus.textContent = selectedComposition
-		? `当前 composition：${selectedComposition.compositionId}。你仍然在同一个页面壳里，只是切到了 Studio 路由。`
-		: "当前是 Studio 总览页。你仍然在同一个页面壳里，只是切到了 Studio 路由。";
+	studioRouteStatus.textContent = getStudioRouteStatusText({
+		compositionId,
+		selectedTopic: selectedComposition?.topic || null,
+		studioReady: true,
+	});
 
 	const nextSrc = buildStudioProxyUrl(compositionId);
 	if (studioFrame.getAttribute("src") !== nextSrc) {
@@ -338,7 +357,7 @@ function renderDirections(directions) {
 			const directionId = button.getAttribute("data-direction-id");
 			selectedDirection = directions.find((item) => item.id === directionId) || null;
 			renderDirections(directions);
-			setStatus(`已选择方向：${selectedDirection?.name ?? "未命名方向"}。现在可以直接生成 spec。`);
+			setStatus(getDirectionSelectionStatus(selectedDirection?.name ?? null));
 		});
 	}
 
@@ -353,30 +372,31 @@ function renderDirections(directions) {
 			selectedDirection = direction;
 			renderDirections(directions);
 			setStatus(`已把方向 "${direction.name}" 填回输入区。`);
-		});
+			});
+		}
 	}
-}
 
 function renderCompositionLibrary(compositions, studioAvailable, studioBaseUrl) {
 	if (!compositions.length) {
 		compositionLibrary.classList.add("empty-state");
-		compositionLibrary.textContent = "还没有已注册 composition。";
+		compositionLibrary.textContent = getCompositionLibraryEmptyText();
 		return;
 	}
 
 	compositionLibrary.classList.remove("empty-state");
 	compositionLibrary.innerHTML = `
 		<div class="studio-state">
-			${studioAvailable
-				? `Remotion Studio 已坐进同一个页面壳里。切到 Studio 路由即可预览。入口：${escapeHtml(studioBaseUrl)}`
-				: "Remotion Studio 还没准备好。切到 Studio 路由后会自动继续等待。"}
-		</div>
+				${getCompositionLibraryStatusText({
+				studioAvailable,
+				studioBaseUrl: escapeHtml(studioBaseUrl),
+			})}
+			</div>
 		<div class="library-grid">
 			${compositions
 				.map(
 					(item) => `
 						<div class="library-card">
-							<div class="section-kicker">${escapeHtml(item.compositionId || "Unknown")}</div>
+							<div class="section-kicker">${escapeHtml(item.compositionId || "未命名")}</div>
 							<div class="library-topic">${escapeHtml(item.topic || "-")}</div>
 							<div class="library-summary">${escapeHtml(item.hookTitle || item.summary || "-")}</div>
 							<div class="library-code">${escapeHtml(item.filePath || item.fileName || "")}</div>
@@ -386,9 +406,9 @@ function renderCompositionLibrary(compositions, studioAvailable, studioBaseUrl) 
 									href="${escapeHtml(buildStudioShellUrl(item.compositionId))}"
 									data-app-link
 								>
-									去 Studio 预览
+									去预览查看
 								</a>
-								<button class="chip-btn" data-copy-composition-id="${escapeHtml(item.compositionId)}">复制 ID</button>
+								<button class="chip-btn" data-copy-composition-id="${escapeHtml(item.compositionId)}">复制编号</button>
 							</div>
 						</div>
 					`,
@@ -404,15 +424,15 @@ function renderCompositionLibrary(compositions, studioAvailable, studioBaseUrl) 
 				return;
 			}
 
-			try {
-				await navigator.clipboard.writeText(compositionId);
-				setStatus(`已复制 composition ID：${compositionId}`);
-			} catch {
-				setStatus(`复制失败，你也可以手动使用：${compositionId}`, true);
-			}
-		});
+				try {
+					await navigator.clipboard.writeText(compositionId);
+					setStatus(`已复制编号：${compositionId}`);
+				} catch {
+					setStatus(`复制失败，你也可以手动使用：${compositionId}`, true);
+				}
+			});
+		}
 	}
-}
 
 function fillFormFromDirection(direction) {
 	document.getElementById("topic").value = direction.topic || "";
@@ -445,9 +465,7 @@ function setSelectedMode(mode) {
 
 	const isStructured = mode === "structured";
 	modeToggle.dataset.mode = mode;
-	modeCopy.textContent = isStructured
-		? "structured 模式会把主题、受众、平台、语气和目标当作主输入，prompt 只作为补充背景。"
-		: "long-copy 模式会把 prompt 当作主输入，结构化字段作为辅助补充。";
+	modeCopy.textContent = getModeCopyText(mode);
 	document.querySelector(".input-panel")?.classList.toggle("structured-mode", isStructured);
 }
 
@@ -460,24 +478,24 @@ function renderPackage(payload) {
 	specJsonView.classList.remove("empty-state");
 
 	briefView.innerHTML = `
-		<div class="brief-grid">
-			${renderBriefItem("主题", brief.topic)}
-			${renderBriefItem("受众", brief.audience)}
-			${renderBriefItem("平台", brief.platform)}
-			${renderBriefItem("语气", brief.tone)}
-			${renderBriefItem("开场角度", brief.hookAngle)}
-			${renderBriefItem("核心结论", brief.coreMessage)}
-			${renderBriefItem("视觉方向", brief.visualDirection)}
-			${renderBriefList("必须包含", brief.mustInclude)}
-			${renderBriefList("避免表达", brief.avoid)}
-		</div>
-	`;
+			<div class="brief-grid">
+				${renderBriefItem("主题", brief.topic)}
+				${renderBriefItem("受众", brief.audience)}
+				${renderBriefItem("平台", brief.platform)}
+				${renderBriefItem("语气", brief.tone)}
+				${renderBriefItem("开场角度", brief.hookAngle)}
+				${renderBriefItem("核心结论", brief.coreMessage)}
+				${renderBriefItem("视觉方向", brief.visualDirection)}
+				${renderBriefList("必须包含", brief.mustInclude)}
+				${renderBriefList("避免表达", brief.avoid)}
+			</div>
+		`;
 
 	assumptionsView.innerHTML = assumptions.length
 		? `<ul class="assumption-list">${assumptions
 				.map((item) => `<li>${escapeHtml(item)}</li>`)
 				.join("")}</ul>`
-		: `<div class="empty-inline">这次没有显式假设。</div>`;
+			: `<div class="empty-inline">这次没有显式假设。</div>`;
 
 	specJsonView.textContent = JSON.stringify(payload.spec, null, 2);
 }

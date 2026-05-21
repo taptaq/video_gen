@@ -3,20 +3,20 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Spec Studio</title>
+    <title>规格工作台</title>
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
     <div class="page-shell">
       <aside class="hero-panel">
-        <div class="hero-badge">Spec Studio</div>
+        <div class="hero-badge">规格工作台</div>
         <nav class="app-nav">
-          <a class="app-nav-link" href="/" data-app-link data-nav-link="spec">Spec 工作台</a>
-          <a class="app-nav-link" href="/studio/" data-app-link data-nav-link="studio">Studio 预览</a>
+          <a class="app-nav-link" href="/" data-app-link data-nav-link="spec">规格工作台</a>
+          <a class="app-nav-link" href="/studio/" data-app-link data-nav-link="studio">预览</a>
         </nav>
-        <h1>用几句话，把视频主题长成可执行 spec。</h1>
+        <h1>用几句话，把视频主题长成可执行规格。</h1>
         <p class="hero-copy">
-          适合还没完整想清结构的时候。你可以只输入一句自然语言，或者补几条要点，让模型先帮你长出创作 brief，再落到项目源码。
+          适合还没完整想清结构的时候。你可以只输入一句自然语言，或者补几条要点，让模型先帮你长出创作概要，再落到项目源码。
         </p>
         <div class="status-card">
           <div class="status-title">当前状态</div>
@@ -27,14 +27,14 @@
           <div class="tip-title">推荐输入方式</div>
           <ul class="tip-list">
             <li>只说一句：适合没有完整思路时快速起稿。</li>
-            <li>补 audience / tone：适合你有一点方向，但不想手写 JSON。</li>
-            <li>补 must include：适合你有必须讲到的事实点。</li>
+            <li>补受众 / 语气：适合你有一点方向，但不想手写结构化数据。</li>
+            <li>补必须包含：适合你有必须讲到的事实点。</li>
           </ul>
         </div>
         <div class="shortcut-card">
           <div class="tip-title">快捷入口</div>
           <div class="shortcut-links">
-            <a class="library-link" href="/studio/" data-app-link>打开 Studio 视图</a>
+            <a class="library-link" href="/studio/" data-app-link>打开预览</a>
           </div>
         </div>
       </aside>
@@ -45,12 +45,12 @@
             <div class="section-kicker">输入</div>
             <div class="input-header">
               <div>
-                <h2>自然语言需求</h2>
-                <p id="mode-copy" class="mode-copy">long-copy 模式会把 prompt 当作主输入，结构化字段作为辅助补充。</p>
+                <h2>视频需求输入</h2>
+                <p id="mode-copy" class="mode-copy">长文案模式会把 prompt 当作主输入，结构化字段作为辅助补充。</p>
               </div>
-              <div id="mode-toggle" class="mode-toggle" role="tablist" aria-label="请求模式">
-                <button type="button" class="mode-chip is-active" data-mode="long-copy" role="tab" aria-selected="true">long-copy</button>
-                <button type="button" class="mode-chip" data-mode="structured" role="tab" aria-selected="false">structured</button>
+              <div id="mode-toggle" class="mode-toggle" role="tablist" aria-label="生成模式">
+                <button type="button" class="mode-chip is-active" data-mode="long-copy" role="tab" aria-selected="true">长文案模式</button>
+                <button type="button" class="mode-chip" data-mode="structured" role="tab" aria-selected="false">结构化模式</button>
               </div>
             </div>
             <textarea
@@ -114,33 +114,33 @@
 
           <section class="output-grid">
             <article class="output-card output-card-wide">
-              <div class="section-kicker">Directions</div>
+              <div class="section-kicker">方向</div>
               <h3>先选一个方向，再往下生成</h3>
               <div id="directions-view" class="directions-view empty-state">还没有方向提案。</div>
             </article>
 
             <article class="output-card output-card-wide">
-              <div class="section-kicker">Library</div>
-              <h3>已注册视频库</h3>
-              <div id="composition-library" class="composition-library empty-state">正在加载 compositions...</div>
+              <div class="section-kicker">库</div>
+              <h3>已注册条目库</h3>
+              <div id="composition-library" class="composition-library empty-state">正在加载已注册条目...</div>
             </article>
 
             <article class="output-card">
-              <div class="section-kicker">Brief</div>
-              <h3>模型补全后的创作方向</h3>
+              <div class="section-kicker">概要</div>
+              <h3>模型补全后的创作概要</h3>
               <div id="brief-view" class="brief-view empty-state">还没有生成内容。</div>
             </article>
 
             <article class="output-card">
-              <div class="section-kicker">Assumptions</div>
+              <div class="section-kicker">假设</div>
               <h3>模型自动补的前提</h3>
               <div id="assumptions-view" class="assumptions-view empty-state">生成后会在这里显示。</div>
             </article>
 
             <article class="output-card output-card-wide">
-              <div class="section-kicker">Spec JSON</div>
+              <div class="section-kicker">规格</div>
               <h3>项目可执行结构</h3>
-              <pre id="spec-json" class="json-view empty-state">还没有生成 JSON。</pre>
+              <pre id="spec-json" class="json-view empty-state">还没有生成数据。</pre>
             </article>
           </section>
         </section>
@@ -149,15 +149,15 @@
           <article class="output-card output-card-wide studio-route-card">
             <div class="studio-route-header">
               <div>
-                <div class="section-kicker">Studio</div>
-                <h3 id="studio-route-title">Remotion 预览</h3>
-                <p id="studio-route-status" class="studio-route-status">正在准备 Studio...</p>
+                <div class="section-kicker">预览</div>
+                <h3 id="studio-route-title">预览</h3>
+                <p id="studio-route-status" class="studio-route-status">正在准备预览工作台...</p>
               </div>
               <div class="studio-route-actions">
-                <a class="ghost-btn" href="/" data-app-link>回到 Spec 工作台</a>
+                <a class="ghost-btn" href="/" data-app-link>回到规格工作台</a>
               </div>
             </div>
-            <iframe id="studio-frame" class="studio-frame" title="Remotion Studio"></iframe>
+            <iframe id="studio-frame" class="studio-frame" title="预览工作台"></iframe>
           </article>
         </section>
       </main>

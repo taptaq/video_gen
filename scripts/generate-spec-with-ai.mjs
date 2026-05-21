@@ -11,13 +11,13 @@ import {
 import { getProjectRoot } from "./spec-utils.mjs";
 
 const usage = `
-Usage:
+用法：
   npm run generate:spec:ai -- "<topic or requirements>"
   npm run generate:spec:ai -- --input prompt.txt
   npm run generate:spec:ai -- --mode long-copy "<topic or requirements>"
   npm run generate:spec:ai -- --mode structured --topic "鱼油误区" --audience "新手" --tone "专业但不板" --must-include "保健品不是药"
 
-Environment:
+环境变量：
   AI_PROVIDER=deepseek
   DEEPSEEK_API_KEY=...
   DEEPSEEK_MODEL=deepseek-v4-flash

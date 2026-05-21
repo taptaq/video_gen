@@ -88,15 +88,15 @@ test("keeps the structured branch distinct from the long-copy branch for ideatio
   assert.equal(calls.length, 4);
   const [ideationLongCopy, specLongCopy, ideationStructured, specStructured] = calls;
 
-  assert.match(ideationLongCopy.messages[0].content, /extracting structure from the raw prompt/i);
-  assert.match(specLongCopy.messages[0].content, /extracting the structure hidden in the raw prompt/i);
-  assert.doesNotMatch(ideationLongCopy.messages[0].content, /primary contract/i);
-  assert.doesNotMatch(specLongCopy.messages[0].content, /primary contract/i);
+  assert.match(ideationLongCopy.messages[0].content, /先从原始提示里提炼结构/);
+  assert.match(specLongCopy.messages[0].content, /先从原始提示里提炼结构/);
+  assert.doesNotMatch(ideationLongCopy.messages[0].content, /主约束/);
+  assert.doesNotMatch(specLongCopy.messages[0].content, /主约束/);
 
-  assert.match(ideationStructured.messages[0].content, /Treat the structured fields as the primary contract\./i);
-  assert.match(specStructured.messages[0].content, /Treat the structured fields as the primary contract\./i);
-  assert.doesNotMatch(ideationStructured.messages[0].content, /extracting structure from the raw prompt/i);
-  assert.doesNotMatch(specStructured.messages[0].content, /extracting the structure hidden in the raw prompt/i);
+  assert.match(ideationStructured.messages[0].content, /请把结构化字段当作主约束/);
+  assert.match(specStructured.messages[0].content, /请把结构化字段当作主约束/);
+  assert.doesNotMatch(ideationStructured.messages[0].content, /先从原始提示/);
+  assert.doesNotMatch(specStructured.messages[0].content, /先从原始提示/);
 
   assert.notEqual(ideationLongCopy.messages[0].content, ideationStructured.messages[0].content);
   assert.notEqual(specLongCopy.messages[0].content, specStructured.messages[0].content);

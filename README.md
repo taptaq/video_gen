@@ -1,60 +1,61 @@
-# Remotion video
+# Remotion 视频项目
 
 <p align="center">
   <a href="https://github.com/remotion-dev/logo">
     <picture>
       <source media="(prefers-color-scheme: dark)" srcset="https://github.com/remotion-dev/logo/raw/main/animated-logo-banner-dark.apng">
-      <img alt="Animated Remotion Logo" src="https://github.com/remotion-dev/logo/raw/main/animated-logo-banner-light.gif">
+      <img alt="Remotion 动画标志" src="https://github.com/remotion-dev/logo/raw/main/animated-logo-banner-light.gif">
     </picture>
   </a>
 </p>
 
-Welcome to your Remotion project!
+欢迎使用这个 Remotion 项目。
 
-## Commands
+## 常用命令
 
-**Install Dependencies**
+**安装依赖**
 
 ```console
 npm i
 ```
 
-**Start Unified App**
+**启动统一工作台**
 
 ```console
 npm run dev
 ```
 
-This now starts the AI spec UI and mounts Remotion Studio under the same local origin.
+这会同时启动 AI 规格工作台，并把 Remotion 预览挂载到同一个本地域名下。
+开发时，`npm run dev` 还会自动监听 `tools/spec-studio/public/`、`scripts/`、`src/` 和 `package.json` 的改动，并在浏览器里自动刷新。
 
-**Start Only Remotion Studio**
+**只启动 Remotion 预览**
 
 ```console
 npm run studio
 ```
 
-**Render video**
+**渲染视频**
 
 ```console
 npx remotion render
 ```
 
-**Upgrade Remotion**
+**升级 Remotion**
 
 ```console
 npx remotion upgrade
 ```
 
-## AI Spec CLI Modes
+## AI 规格模式
 
-The AI spec generator supports two invocation modes:
+AI 规格生成器支持两种模式：
 
-- `long-copy`: paste a full draft, caption, or requirement block and let the CLI treat it as the source text.
-- `structured`: fill in fields like `--topic`, `--audience`, `--platform`, `--tone`, `--goal`, `--must-include`, and `--avoid` when you already know the shape of the request.
+- `long-copy`：适合直接粘贴完整文案、长需求或已经写好的草稿，让 CLI 先把它当成原始文本来理解。
+- `structured`：适合你已经知道主题、受众、平台、语气、目标等字段时，直接按结构化信息填写。
 
-Both modes still produce the same Remotion spec shape, so the downstream render flow does not change.
+两种模式最终都会产出同一种 Remotion 规格结构，所以后面的渲染流程不会变化。
 
-Examples:
+示例：
 
 ```console
 npm run generate:spec:ai -- --mode long-copy "做一个关于褪黑素误区的 9:16 抖音科普视频，风格专业但别太板"
@@ -64,18 +65,18 @@ npm run generate:spec:ai -- --mode long-copy "做一个关于褪黑素误区的 
 npm run generate:spec:ai -- --mode structured --topic "鱼油误区" --audience "新手" --platform "抖音" --tone "专业但不板" --goal "澄清常见误区" --must-include "保健品不是药"
 ```
 
-## Docs
+## 文档
 
-Get started with Remotion by reading the [fundamentals page](https://www.remotion.dev/docs/the-fundamentals).
+如果你想先了解 Remotion 基础，可以看 [官方入门文档](https://www.remotion.dev/docs/the-fundamentals)。
 
-## Help
+## 帮助
 
-We provide help on our [Discord server](https://discord.gg/6VzzNDwUwV).
+你可以在 [Discord 社区](https://discord.gg/6VzzNDwUwV) 获取帮助。
 
-## Issues
+## 问题反馈
 
-Found an issue with Remotion? [File an issue here](https://github.com/remotion-dev/remotion/issues/new).
+如果你在 Remotion 上遇到问题，可以到 [这里提交 issue](https://github.com/remotion-dev/remotion/issues/new)。
 
-## License
+## 许可
 
-Note that for some entities a company license is needed. [Read the terms here](https://github.com/remotion-dev/remotion/blob/main/LICENSE.md).
+某些场景可能需要公司许可证，详情请看 [条款说明](https://github.com/remotion-dev/remotion/blob/main/LICENSE.md)。

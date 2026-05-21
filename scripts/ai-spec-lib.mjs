@@ -317,25 +317,25 @@ function buildSpecSystemPrompt(mode = "long-copy") {
 	const instructions =
 		mode === "structured"
 			? [
-					"You are generating both a creative brief and structured JSON for a Remotion knowledge-video template.",
-					"Treat the structured fields as the primary contract.",
-					"When the structured fields and raw prompt differ, follow the structured fields first and use the raw prompt only to fill gaps.",
-					"Return valid JSON only.",
-					"Do not wrap the JSON in markdown fences.",
-					"Generate concise, platform-ready Chinese copy for a 9:16 short-form educational video.",
+					"你正在为一个 Remotion 知识类视频模板生成创作概要和结构化 JSON。",
+					"请把结构化字段当作主约束。",
+					"当结构化字段和原始提示不一致时，请优先遵循结构化字段，只用原始提示补齐缺口。",
+					"只返回有效 JSON。",
+					"不要把 JSON 包在 markdown 代码块里。",
+					"请生成适合 9:16 竖屏知识短视频的简洁中文文案。",
 			  ]
 			: [
-					"You are generating both a creative brief and structured JSON for a Remotion knowledge-video template.",
-					"Start by extracting the structure hidden in the raw prompt, then reconcile any structured hints against it.",
-					"Treat the raw prompt as the main source of intent when it is present.",
-					"Return valid JSON only.",
-					"Do not wrap the JSON in markdown fences.",
-					"Generate concise, platform-ready Chinese copy for a 9:16 short-form educational video.",
+					"你正在为一个 Remotion 知识类视频模板生成创作概要和结构化 JSON。",
+					"请先从原始提示里提炼结构，再去对照结构化提示进行修正。",
+					"当原始提示存在时，请把它当作主要意图来源。",
+					"只返回有效 JSON。",
+					"不要把 JSON 包在 markdown 代码块里。",
+					"请生成适合 9:16 竖屏知识短视频的简洁中文文案。",
 			  ];
 
 	return [
 		...instructions,
-		"Follow this exact top-level shape:",
+		"请严格遵循以下顶层结构：",
 		"{",
 		'  "brief": {',
 		'    "topic": "主题",',
@@ -363,14 +363,14 @@ function buildSpecSystemPrompt(mode = "long-copy") {
 		'    "outro": { "title": "", "subtitle": "", "summary": "", "copy": "", "nextSteps": [{ "label": "", "copy": "" }] }',
 		"  }",
 		"}",
-		"Requirements:",
-		"- id must be kebab-case ASCII.",
-		"- compositionId must be PascalCase ASCII.",
-		"- The brief must be readable and useful even when the user only gave one or two sentences.",
-		"- If the user input is sparse, fill gaps with sensible assumptions and list them in assumptions.",
-		"- Produce 3 tickerItems minimum, 3 insight points, 3 timeline milestones, 3 comparison items, 4 checklist tips, 2 outro nextSteps.",
-		"- Keep the writing practical, specific, and suitable for knowledge-style short video narration.",
-		"- Avoid medical, legal, or financial claims unless clearly framed as general education.",
+		"要求：",
+		"- id 必须是 kebab-case ASCII。",
+		"- compositionId 必须是 PascalCase ASCII。",
+		"- 即使用户只给一两句话，创作概要也必须可读、可用。",
+		"- 如果用户输入比较稀疏，请补全合理假设，并把它们列在 assumptions 里。",
+		"- tickerItems 至少 3 条，insight points 至少 3 条，timeline milestones 至少 3 条，comparison items 至少 3 条，checklist tips 至少 4 条，outro nextSteps 至少 2 条。",
+		"- 文案要务实、具体，适合知识类短视频口播。",
+		"- 除非明确作为泛知识表达，不要写医疗、法律或金融结论。",
 	].join("\n");
 }
 
@@ -391,15 +391,15 @@ function buildSpecUserPrompt(requestContext, mode = "long-copy") {
 
 	return [
 		mode === "structured"
-			? "Generate one complete JSON object for the following video request."
-			: "Generate one complete JSON object by first extracting the structure hidden in the raw prompt and then folding in the hints.",
+			? "请为下面的视频需求生成一个完整 JSON 对象。"
+			: "请先从原始提示中提炼结构，再结合提示信息生成一个完整 JSON 对象。",
 		mode === "structured"
-			? "Structured fields are the primary contract; use them first and treat the raw prompt as secondary support."
-			: "If the request is sparse, infer a strong educational structure from the raw prompt and clearly surface your assumptions.",
-		extraLines ? "\nStructured hints:\n" + extraLines : "",
+			? "结构化字段是主约束；请优先使用它们，把原始提示当作辅助背景。"
+			: "如果请求信息比较稀疏，请从原始提示中推断出清晰的知识结构，并明确写出你的假设。",
+		extraLines ? "\n结构化提示：\n" + extraLines : "",
 		"",
-		"Natural-language request:",
-		requestContext.rawPrompt || "(No extra prompt provided. Rely on the structured hints.)",
+		"自然语言请求：",
+		requestContext.rawPrompt || "（未提供额外提示，请依赖结构化提示。）",
 	].join("\n");
 }
 
@@ -407,23 +407,23 @@ function buildIdeationSystemPrompt(mode = "long-copy") {
 	const instructions =
 		mode === "structured"
 			? [
-					"You are helping ideate short-form knowledge video directions before final script generation.",
-					"Treat the structured fields as the primary contract.",
-					"Use the raw prompt only to resolve gaps or ambiguous details.",
-					"Return valid JSON only.",
-					"Do not wrap the JSON in markdown fences.",
+					"你正在帮助在最终脚本生成前，先构思短视频知识内容的方向。",
+					"请把结构化字段当作主约束。",
+					"只在需要补足缺口或消除歧义时，才使用原始提示。",
+					"只返回有效 JSON。",
+					"不要把 JSON 包在 markdown 代码块里。",
 			  ]
 			: [
-					"You are helping ideate short-form knowledge video directions before final script generation.",
-					"Start by extracting structure from the raw prompt before you interpret any hints.",
-					"Use the structured fields as supporting context, not the starting point.",
-					"Return valid JSON only.",
-					"Do not wrap the JSON in markdown fences.",
+					"你正在帮助在最终脚本生成前，先构思短视频知识内容的方向。",
+					"请先从原始提示里提炼结构，再解释任何辅助信息。",
+					"请把结构化字段当作辅助背景，而不是起点。",
+					"只返回有效 JSON。",
+					"不要把 JSON 包在 markdown 代码块里。",
 			  ];
 
 	return [
 		...instructions,
-		"Output shape:",
+		"输出结构：",
 		"{",
 		'  "directions": [',
 		"    {",
@@ -444,11 +444,11 @@ function buildIdeationSystemPrompt(mode = "long-copy") {
 		"    }",
 		"  ]",
 		"}",
-		"Requirements:",
-		"- Return exactly 3 directions.",
-		"- The 3 directions must differ meaningfully in angle or structure, not just wording.",
-		"- Fit Chinese short-form knowledge videos.",
-		"- If the user is vague, infer practical options and make them clearly distinct.",
+		"要求：",
+		"- 必须返回 3 个方向。",
+		"- 3 个方向在切入角度或结构上必须明显不同，不能只是措辞不同。",
+		"- 适合中文知识类短视频。",
+		"- 如果用户表达比较模糊，请推断出实用方案，并让三个方向清晰区分。",
 	].join("\n");
 }
 
@@ -469,15 +469,15 @@ function buildIdeationUserPrompt(requestContext, mode = "long-copy") {
 
 	return [
 		mode === "structured"
-			? "Please propose 3 distinct video directions for this request."
-			: "Please propose 3 distinct video directions by extracting the raw prompt structure first and then refining it with the hints.",
+			? "请为这个需求提出 3 个彼此不同的视频方向。"
+			: "请先从原始提示中提炼结构，再结合提示信息提出 3 个彼此不同的视频方向。",
 		mode === "structured"
-			? "Each direction should treat the structured fields as the main contract."
-			: "Each direction should preserve the raw prompt's intent before interpreting the hints.",
-		extraLines ? "\nStructured hints:\n" + extraLines : "",
+			? "每个方向都应该把结构化字段当作主约束。"
+			: "每个方向都应该先保留原始提示的意图，再去解释辅助信息。",
+		extraLines ? "\n结构化提示：\n" + extraLines : "",
 		"",
-		"Natural-language request:",
-		requestContext.rawPrompt || "(No extra prompt provided. Rely on the structured hints.)",
+		"自然语言请求：",
+		requestContext.rawPrompt || "（未提供额外提示，请依赖结构化提示。）",
 	].join("\n");
 }
 

@@ -5,6 +5,7 @@ import http from "node:http";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import { URL } from "node:url";
+import { createDevReloadBroadcaster, createDevReloadWatcher } from "./dev-reload.mjs";
 import { createRemotionStudioProxy } from "./remotion-studio-proxy.mjs";
 import {
 	STUDIO_PROXY_PATH,
@@ -26,10 +27,12 @@ const projectRoot = getProjectRoot();
 loadProjectEnv(projectRoot);
 
 const publicDir = path.join(projectRoot, "tools", "spec-studio", "public");
-const port = Number(process.env.SPEC_STUDIO_PORT ?? 3210);
+const scriptsDir = path.join(projectRoot, "scripts");
+const srcDir = path.join(projectRoot, "src");
+const packageJsonPath = path.join(projectRoot, "package.json");
+const requestedPort = Number(process.env.SPEC_STUDIO_PORT ?? 3210);
 const host = process.env.SPEC_STUDIO_HOST ?? "127.0.0.1";
 const managedStudioBaseUrl = process.env.REMOTION_STUDIO_URL ?? "http://127.0.0.1:3000";
-const publicStudioBaseUrl = `http://${host}:${port}${STUDIO_SHELL_PATH}`;
 const shouldManageStudioProcess = !process.env.REMOTION_STUDIO_URL;
 
 const studioProxy = createRemotionStudioProxy({
@@ -39,11 +42,18 @@ const studioProxy = createRemotionStudioProxy({
 
 let studioProcess = null;
 let isShuttingDown = false;
+let devReloadWatcher = null;
+const devReload = createDevReloadBroadcaster({
+	watchPaths: [publicDir, scriptsDir, srcDir, packageJsonPath],
+});
+
+startDevReloadWatcher();
 
 const server = http.createServer(async (req, res) => {
 	try {
 		const method = req.method ?? "GET";
-		const url = new URL(req.url ?? "/", `http://${host}:${port}`);
+		const currentPort = getServerPort();
+		const url = new URL(req.url ?? "/", `http://${host}:${currentPort}`);
 
 		if (studioProxy.isStudioRequest(url.pathname)) {
 			await studioProxy.proxyHttpRequest(req, res);
@@ -60,8 +70,8 @@ const server = http.createServer(async (req, res) => {
 				keyConfigured: Boolean(process.env.DEEPSEEK_API_KEY),
 				model: process.env.DEEPSEEK_MODEL ?? "deepseek-v4-flash",
 				specCount: compositions.length,
-				studioBaseUrl: publicStudioBaseUrl,
-				studioProxyBaseUrl: `http://${host}:${port}${STUDIO_PROXY_PATH}`,
+				studioBaseUrl: `http://${host}:${getServerPort()}${STUDIO_SHELL_PATH}`,
+				studioProxyBaseUrl: `http://${host}:${getServerPort()}${STUDIO_PROXY_PATH}`,
 				studioAvailable: await isStudioAvailable(),
 				compositions,
 			});
@@ -138,9 +148,13 @@ const server = http.createServer(async (req, res) => {
 			});
 		}
 
+		if (method === "GET" && url.pathname === "/api/live-reload") {
+			return serveLiveReloadStream(req, res);
+		}
+
 		if (method === "GET") {
 			if (isAppShellRoute(url.pathname)) {
-				return serveAppShell(res);
+			return serveAppShell(res);
 			}
 
 			return serveStaticFile(url.pathname, res);
@@ -166,9 +180,9 @@ if (shouldManageStudioProcess) {
 	void ensureManagedStudioProcess();
 }
 
-server.listen(port, host, () => {
-	console.log(`Unified app running at http://${host}:${port}`);
-	console.log(`App shell: http://${host}:${port}/`);
+server.listen(requestedPort, host, () => {
+	console.log(`Unified app running at http://${host}:${getServerPort()}`);
+	console.log(`App shell: http://${host}:${getServerPort()}/`);
 });
 
 registerShutdownHandlers();
@@ -198,7 +212,7 @@ function getRegisteredCompositions() {
 				topic,
 				hookTitle,
 				summary,
-				studioUrl: `http://${host}:${port}${buildStudioShellUrl(compositionId)}`,
+				studioUrl: `http://${host}:${getServerPort()}${buildStudioShellUrl(compositionId)}`,
 			};
 		});
 }
@@ -221,6 +235,32 @@ function serveAppShell(res) {
 	const filePath = path.join(publicDir, "index.html");
 	res.writeHead(200, { "Content-Type": "text/html; charset=utf-8" });
 	res.end(fs.readFileSync(filePath));
+}
+
+function serveLiveReloadStream(req, res) {
+	res.writeHead(200, {
+		"Content-Type": "text/event-stream; charset=utf-8",
+		"Cache-Control": "no-cache, no-transform",
+		Connection: "keep-alive",
+	});
+	res.write("retry: 1000\n\n");
+
+	const client = devReload.connect({
+		send(eventName, changedPath) {
+			res.write(`event: ${eventName}\n`);
+			res.write(`data: ${JSON.stringify({ changedPath, timestamp: Date.now() })}\n\n`);
+		},
+	});
+
+	const keepAlive = setInterval(() => {
+		res.write(": keep-alive\n\n");
+	}, 15000);
+
+	req.on("close", () => {
+		clearInterval(keepAlive);
+		client.close();
+		res.end();
+	});
 }
 
 function serveStaticFile(requestPath, res) {
@@ -250,6 +290,15 @@ function sendJson(res, statusCode, payload) {
 		"Content-Type": "application/json; charset=utf-8",
 	});
 	res.end(JSON.stringify(payload));
+}
+
+function getServerPort() {
+	const address = server.address();
+	if (address && typeof address === "object" && "port" in address) {
+		return address.port;
+	}
+
+	return requestedPort;
 }
 
 async function isStudioAvailable() {
@@ -346,6 +395,8 @@ async function shutdown() {
 	}
 
 	isShuttingDown = true;
+	devReloadWatcher?.close();
+	devReload.close();
 
 	await new Promise((resolve) => {
 		server.close(() => resolve());
@@ -395,5 +446,14 @@ function pipeStudioLogs(stream, level) {
 			const logger = level === "warn" ? console.warn : console.log;
 			logger(`[remotion] ${message}`);
 		}
+	});
+}
+
+function startDevReloadWatcher() {
+	devReloadWatcher = createDevReloadWatcher({
+		watchPaths: [publicDir, scriptsDir, srcDir, packageJsonPath],
+		onChange(changedPath) {
+			devReload.emitChange(changedPath);
+		},
 	});
 }

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 
 import { buildGeneratePayload, buildIdeatePayload } from "./request-builder.mjs";
 
-test("buildGeneratePayload includes mode and merges selected direction overrides", () => {
+test("buildGeneratePayload 会带上 mode 并合并所选方向的覆盖字段", () => {
 	const form = {
 		prompt: "Base prompt",
 		topic: "Base topic",
@@ -38,7 +38,7 @@ test("buildGeneratePayload includes mode and merges selected direction overrides
 	});
 });
 
-test("buildIdeatePayload includes mode without altering the form", () => {
+test("buildIdeatePayload 会带上 mode 且不改变表单原值", () => {
 	const form = {
 		prompt: "Base prompt",
 		topic: "Base topic",
